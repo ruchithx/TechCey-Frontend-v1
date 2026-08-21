@@ -1,0 +1,215 @@
+/* =============================================================================
+ * TechCey design tokens  —  THE design spec (there is no Figma).
+ * Single source of truth for both apps/web and apps/admin.
+ *
+ * How it works (Tailwind v4, CSS-first):
+ *   1. Semantic CSS custom properties are declared on :root (light) and .dark.
+ *   2. `@theme inline` maps them into Tailwind's namespaces so they become
+ *      utilities: bg-primary, text-muted-foreground, rounded-lg, shadow-md, etc.
+ *   3. Never use a raw hex or a raw Tailwind palette class (bg-blue-600) in app
+ *      code — the ESLint rule in D5 forbids it. Change a token HERE, once.
+ *
+ * Palette (light) — 6 signature values:
+ *   Cloud   #F8FAFC  background      Ink    #0F172A  foreground
+ *   Surface #FFFFFF  card/popover    Slate  #64748B  muted-foreground
+ *   Indigo  #4F46E5  primary (brand) Amber  #F59E0B  accent (CTA / sale)
+ * Rationale: cool slate neutrals read as calm and trustworthy; a single
+ * confident indigo carries the brand; amber is spent only on the one thing that
+ * must convert (price/CTA/sale). Dense, legible, fast to scan — a working shop,
+ * not an art project. Signature choice: all money/SKU/order numbers render in a
+ * tabular monospaced face (.font-tabular) so figures align in columns.
+ * ========================================================================== */
+
+@import "tailwindcss";
+
+/* Dark mode: class strategy (<html class="dark">). */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ---- Color: semantic, never literal ---- */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f59e0b;
+  --accent-foreground: #422006;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #4f46e5;
+
+  /* ---- Radius: one base, the rest derived ---- */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ---- Shadow: 3 levels max ---- */
+  --shadow-e1: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow-e2: 0 2px 8px -1px rgb(15 23 42 / 0.1), 0 1px 3px -1px rgb(15 23 42 / 0.06);
+  --shadow-e3: 0 12px 32px -8px rgb(15 23 42 / 0.18), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+
+  /* ---- Z-index: named scale so three devs don't invent conflicting values ---- */
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1200;
+  --z-modal: 1300;
+  --z-toast: 1400;
+
+  /* ---- Layout: container + page gutters ---- */
+  --container-max: 80rem; /* 1280px */
+  --page-gutter: 1rem;
+}
+
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --popover: #111827;
+  --popover-foreground: #e2e8f0;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #fbbf24;
+  --accent-foreground: #422006;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #22c55e;
+  --success-foreground: #052e16;
+  --warning: #f59e0b;
+  --warning-foreground: #422006;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #6366f1;
+
+  --shadow-e1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-e2: 0 2px 8px -1px rgb(0 0 0 / 0.5), 0 1px 3px -1px rgb(0 0 0 / 0.4);
+  --shadow-e3: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 4px 8px -4px rgb(0 0 0 / 0.4);
+}
+
+/* -----------------------------------------------------------------------------
+ * Map tokens into Tailwind's theme so they become utilities.
+ * `inline` = resolve to the current :root/.dark value at use-site (dark-aware).
+ * -------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-e1: var(--shadow-e1);
+  --shadow-e2: var(--shadow-e2);
+  --shadow-e3: var(--shadow-e3);
+
+  /* Type faces. Geist is loaded via next/font in each app's root layout.
+     Display + body share Geist Sans (weight is the differentiator); the tabular
+     face is Geist Mono, reserved for money / SKU / order numbers. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Type scale with intentional line-heights. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+}
+
+/* -----------------------------------------------------------------------------
+ * Named utilities for the token groups Tailwind has no first-class namespace for.
+ * -------------------------------------------------------------------------- */
+@layer utilities {
+  /* Tabular figures — the signature treatment for prices, SKUs, order numbers. */
+  .font-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Named z-index scale. */
+  .z-dropdown { z-index: var(--z-dropdown); }
+  .z-sticky   { z-index: var(--z-sticky); }
+  .z-overlay  { z-index: var(--z-overlay); }
+  .z-modal    { z-index: var(--z-modal); }
+  .z-toast    { z-index: var(--z-toast); }
+
+  /* Page container: max width + responsive gutters. */
+  .container-page {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+  @media (min-width: 768px) {
+    .container-page { --page-gutter: 1.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .container-page { --page-gutter: 2rem; }
+  }
+}
+
+/* Base element defaults. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+}
