@@ -1,4 +1,4 @@
 export const authRoutes = {
   owner: "auth",
-  paths: ["/login", "/callback"],
+  paths: ["/login", "/signup", "/callback"],
 } as const;

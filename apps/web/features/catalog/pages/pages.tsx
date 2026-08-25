@@ -1,9 +1,22 @@
 import { FeaturePlaceholder } from "@/components/feature-placeholder";
+import { CategoryNav } from "../components/home/category-nav";
+import { CtaBanner } from "../components/home/cta-banner";
+import { FeaturedProducts } from "../components/home/featured-products";
+import { HeroSection } from "../components/home/hero-section";
+import { ValueProps } from "../components/home/value-props";
 
 const OWNER = "Catalog";
 
 export function HomePage() {
-  return <FeaturePlaceholder feature="Home / Storefront" route="/" owner={OWNER} />;
+  return (
+    <div className="flex flex-col gap-12 sm:gap-16">
+      <HeroSection />
+      <ValueProps />
+      <CategoryNav />
+      <FeaturedProducts />
+      <CtaBanner />
+    </div>
+  );
 }
 export function ProductListPage() {
   return <FeaturePlaceholder feature="Product Listing" route="/products" owner={OWNER} />;

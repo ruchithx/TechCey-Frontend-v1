@@ -21,6 +21,7 @@ export interface AuthApi {
   currentUser: CurrentUser | null;
   hasRole: (role: AppRole) => boolean;
   login: (returnTo?: string) => void;
+  signup: (returnTo?: string) => void;
   logout: () => void;
 }
 
@@ -37,16 +38,33 @@ export function useAuth(): AuthApi {
     [currentUser],
   );
 
+  const preserveReturnTo = useCallback((returnTo?: string) => {
+    // Preserve the attempted URL so 401 handling / guards can return the user
+    // to where they were (D3.6).
+    if (returnTo && typeof window !== "undefined") {
+      window.sessionStorage.setItem(RETURN_TO_KEY, returnTo);
+    }
+  }, []);
+
   const login = useCallback(
     (returnTo?: string) => {
-      // Preserve the attempted URL so 401 handling / guards can return the user
-      // to where they were (D3.6).
-      if (returnTo && typeof window !== "undefined") {
-        window.sessionStorage.setItem(RETURN_TO_KEY, returnTo);
-      }
+      preserveReturnTo(returnTo);
       void oidc.signinRedirect();
     },
-    [oidc],
+    [oidc, preserveReturnTo],
+  );
+
+  const signup = useCallback(
+    (returnTo?: string) => {
+      preserveReturnTo(returnTo);
+      // Same Authorization Code + PKCE flow as login, but sent straight to
+      // Keycloak's registration form via the standard OIDC `prompt=create`
+      // param (Initiating User Registration draft; supported by Keycloak
+      // 26.x). No separate client, endpoint, or credential handling here —
+      // Keycloak still owns account creation.
+      void oidc.signinRedirect({ prompt: "create" });
+    },
+    [oidc, preserveReturnTo],
   );
 
   const logout = useCallback(() => {
@@ -59,6 +77,7 @@ export function useAuth(): AuthApi {
     currentUser,
     hasRole,
     login,
+    signup,
     logout,
   };
 }
