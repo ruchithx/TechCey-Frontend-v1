@@ -9,7 +9,7 @@ OIDC provider mounts client-side only, and route guards are wrapper components.
 |---|---|
 | `oidc-config.ts` | Builds the OIDC config from env. sessionStorage token store; `automaticSilentRenew`. |
 | `auth-provider.tsx` | `<AuthProvider>` — wraps react-oidc-context, registers the HTTP token + 401 handlers, emits login-success. |
-| `use-auth.ts` | `useAuth()` — `{ isAuthenticated, isLoading, currentUser, hasRole, login, logout }`. |
+| `use-auth.ts` | `useAuth()` — `{ isAuthenticated, isLoading, currentUser, hasRole, login, signup, logout }`. |
 | `guards.tsx` | `<AuthGuard>` and `<RoleGuard roles={[...]}>` wrapper components. |
 | `jwt.ts` | Decode `sub` / `preferred_username` / `email` / `realm_access.roles` from the access token (display only). |
 | `on-login.ts` | `onLoginSuccess(cb)` seam — the cart feature subscribes here to run cart-merge. |
@@ -22,6 +22,13 @@ OIDC provider mounts client-side only, and route guards are wrapper components.
   redirect that preserves the attempted URL (`takeReturnTo()`).
 - Token storage is **sessionStorage** (not localStorage): smaller XSS/persistence surface; cleared on
   tab close.
+
+## Sign up
+`signup(returnTo?)` reuses the exact same Authorization Code + PKCE redirect as `login()`, adding
+the standard OIDC `prompt=create` param so Keycloak opens its registration form instead of its
+login form. There is no separate signup client, endpoint, or local credential form — Keycloak is
+the sole owner of account creation, consistent with §1 of the root `CLAUDE.md` (Keycloak pinned,
+no bypassing it). Requires the realm's "User registration" setting to be on.
 
 ## Guarding a route
 ```tsx
