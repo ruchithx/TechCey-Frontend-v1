@@ -14,6 +14,7 @@ const RETURN_TO_KEY = "techcey.admin.returnTo";
 export interface AuthApi {
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: Error | undefined;
   currentUser: CurrentUser | null;
   hasRole: (role: AppRole) => boolean;
   login: (returnTo?: string) => void;
@@ -50,6 +51,7 @@ export function useAuth(): AuthApi {
   return {
     isAuthenticated: oidc.isAuthenticated,
     isLoading: oidc.isLoading,
+    error: oidc.error,
     currentUser,
     hasRole,
     login,

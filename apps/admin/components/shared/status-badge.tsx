@@ -1,7 +1,7 @@
 import { Badge } from "@repo/ui/components/badge";
 import type { NotificationStatus, OrderStatus } from "@/core/api/types";
 
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive" | "success" | "warning" | "accent";
+type BadgeVariant = "default" | "secondary" | "outline" | "destructive" | "success" | "warning";
 
 const NOTIFICATION_VARIANT: Record<NotificationStatus, BadgeVariant> = {
   PENDING: "secondary",

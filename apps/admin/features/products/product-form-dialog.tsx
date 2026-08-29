@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -16,6 +16,7 @@ import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { Select } from "@repo/ui/components/select";
 import { Field } from "@/components/shared/form-field";
+import { ImageUpload } from "@/components/shared/image-upload";
 import { useToast } from "@/components/shared/toast";
 import { applyFieldErrors } from "@/components/shared/apply-field-errors";
 import { getErrorMessage } from "@/components/shared/error-message";
@@ -132,8 +133,18 @@ export function ProductFormDialog({
             </Select>
           </Field>
 
-          <Field label="Image URL" htmlFor="imageUrl" error={errors.imageUrl?.message}>
-            <Input id="imageUrl" placeholder="https://…" {...form.register("imageUrl")} />
+          <Field label="Image">
+            <Controller
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <ImageUpload
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.imageUrl?.message}
+                />
+              )}
+            />
           </Field>
 
           <DialogFooter>

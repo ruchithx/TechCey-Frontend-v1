@@ -38,6 +38,9 @@ export const env = {
   /** OIDC scopes requested at login. */
   authScope: readEnv(process.env.NEXT_PUBLIC_KEYCLOAK_SCOPE, "openid profile email"),
 
+  cloudinaryCloudName: readEnv(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, ""),
+  cloudinaryUploadPreset: readEnv(process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET, ""),
+
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
 } as const;
