@@ -52,6 +52,11 @@ export const env = {
       process.env.NODE_ENV === "development" ? "true" : "false",
     ) === "true",
 
+  /** PayHere merchant ID (public — used in the browser payment form). */
+  payhereMerchantId: readEnv(process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID, ""),
+  /** true = use PayHere sandbox; false = live. */
+  payhereSandbox: process.env.NEXT_PUBLIC_PAYHERE_SANDBOX !== "false",
+
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
 } as const;

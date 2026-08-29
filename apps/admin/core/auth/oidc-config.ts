@@ -22,8 +22,20 @@ export function buildOidcConfig(): AuthProviderProps {
     response_type: "code",
     automaticSilentRenew: true,
 
-    // Clean the ?code&state params off the URL after a successful callback.
+    // Clean the ?code&state params off the URL after a successful signin callback.
     onSigninCallback: () => {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    },
+
+    // Keycloak redirects back to post_logout_redirect_uri with ?state=<x> (no code).
+    // react-oidc-context only calls signoutCallback() if this returns true.
+    matchSignoutCallback: () => {
+      const params = new URLSearchParams(window.location.search);
+      return Boolean(params.get("state")) && !params.get("code") && !params.get("error");
+    },
+
+    // Clean ?state off the URL after signout completes.
+    onSignoutCallback: () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     },
 

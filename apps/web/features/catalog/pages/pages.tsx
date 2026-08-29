@@ -4,6 +4,8 @@ import { CtaBanner } from "../components/home/cta-banner";
 import { FeaturedProducts } from "../components/home/featured-products";
 import { HeroSection } from "../components/home/hero-section";
 import { ValueProps } from "../components/home/value-props";
+import { ProductDetailPage as ProductDetail } from "../components/product-detail/product-detail-page";
+import { ProductListPage as ProductList } from "../components/product-list/product-list-page";
 
 const OWNER = "Catalog";
 
@@ -19,10 +21,10 @@ export function HomePage() {
   );
 }
 export function ProductListPage() {
-  return <FeaturePlaceholder feature="Product Listing" route="/products" owner={OWNER} />;
+  return <ProductList />;
 }
 export function ProductDetailPage() {
-  return <FeaturePlaceholder feature="Product Detail" route="/products/:id" owner={OWNER} />;
+  return <ProductDetail />;
 }
 export function CategoryPage() {
   return <FeaturePlaceholder feature="Category" route="/categories/:slug" owner={OWNER} />;

@@ -22,6 +22,8 @@ export interface ProductResponse {
   imageUrl: string | null; // nullable — always needs a fallback
   stock: number;
   categoryId: number;
+  /** Nested object returned by the real product-service (absent in MSW mocks). */
+  category?: { id: number; name: string; description: string | null };
   createdAt: string; // ISO-8601
   updatedAt: string;
 }
