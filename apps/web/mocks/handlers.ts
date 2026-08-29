@@ -14,7 +14,16 @@
 import { http, HttpResponse, delay } from "msw";
 import { env } from "@/core/config/env";
 import { ENDPOINTS } from "@/core/api/endpoints";
-import { cart, categories, orders, products } from "@/mocks/fixtures";
+import {
+  availabilityByProductId,
+  cart,
+  categories,
+  currentUser,
+  orders,
+  products,
+  reviews,
+  reviewSummaryFor,
+} from "@/mocks/fixtures";
 
 const base = env.apiBaseUrl;
 const P = (path: string) => `${base}${path}`;
@@ -42,7 +51,7 @@ const productHandlers = [
 
     let filtered = products;
     if (keyword) filtered = filtered.filter((p) => p.name.toLowerCase().includes(keyword));
-    if (categoryId) filtered = filtered.filter((p) => p.categoryId === Number(categoryId));
+    if (categoryId) filtered = filtered.filter((p) => p.category.id === Number(categoryId));
 
     const start = page * size;
     const content = filtered.slice(start, start + size);
@@ -106,7 +115,9 @@ const cartHandlers = [
 
   http.put(P(`${ENDPOINTS.cart.addItem()}/:productId`), () => HttpResponse.json(cart)),
   http.delete(P(`${ENDPOINTS.cart.addItem()}/:productId`), () => HttpResponse.json(cart)),
-  http.delete(P(ENDPOINTS.cart.clear()), () => HttpResponse.json({ ...cart, items: [], itemCount: 0, totalAmount: "0.00" })),
+  http.delete(P(ENDPOINTS.cart.clear()), () =>
+    HttpResponse.json({ ...cart, items: [], totalQuantity: 0, totalPrice: "0.00" }),
+  ),
   http.post(P(ENDPOINTS.cart.merge()), () => HttpResponse.json(cart)),
 ];
 
@@ -169,29 +180,139 @@ const orderHandlers = [
   ),
 ];
 
-/* ------------------------- stub-backend contracts ------------------------- */
-/* @stub-backend — these services are not implemented yet. Shapes are best-guess
- * expected contracts so features can be built against them. NOT in ENDPOINTS
- * because the endpoints don't exist on the real gateway yet. */
+/* -------------------------------- inventory -------------------------------- */
+/* inventory-service WRAPS everything in the common envelope. */
 
-const stubHandlers = [
-  // review-service (stub): product reviews summary.
-  http.get(P("/api/reviews"), ({ request }) => {
-    const productId = new URL(request.url).searchParams.get("productId");
+const inventoryHandlers = [
+  http.get(P(ENDPOINTS.inventory.batch()), ({ request }) => {
+    const ids = (new URL(request.url).searchParams.get("productIds") ?? "")
+      .split(",")
+      .map(Number)
+      .filter((n) => !Number.isNaN(n));
+    const data = ids.map(
+      (id) =>
+        availabilityByProductId[id] ?? { productId: id, quantityAvailable: 0, inStock: false, lowStock: true },
+    );
+    return HttpResponse.json(envelope(data));
+  }),
+
+  http.get(P(ENDPOINTS.inventory.byProductId(0)).replace(/\/0$/, "/:productId"), ({ params }) => {
+    const productId = Number(params.productId);
+    const availability = availabilityByProductId[productId];
+    if (!availability) {
+      return HttpResponse.json(
+        { success: false, message: "No inventory record", data: null, timestamp: new Date().toISOString() },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(envelope(availability));
+  }),
+];
+
+/* --------------------------------- reviews ---------------------------------- */
+/* review-service returns BARE payloads — no envelope. */
+
+const reviewHandlers = [
+  http.get(P(ENDPOINTS.reviews.summary()), ({ request }) => {
+    const productId = Number(new URL(request.url).searchParams.get("productId"));
+    return HttpResponse.json(reviewSummaryFor(productId));
+  }),
+
+  http.get(P(ENDPOINTS.reviews.list()), ({ request }) => {
+    const url = new URL(request.url);
+    const productId = url.searchParams.get("productId");
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 20);
+    const filtered = productId ? reviews.filter((r) => r.productId === Number(productId)) : reviews;
     return HttpResponse.json({
-      productId: Number(productId),
-      average: 4.3,
-      count: 128,
-      items: [
-        { id: 1, author: "Sam", rating: 5, comment: "Great!", createdAt: "2025-05-01T00:00:00Z" },
-        { id: 2, author: "Lee", rating: 4, comment: "Good value.", createdAt: "2025-05-02T00:00:00Z" },
-      ],
+      content: filtered.slice(page * size, page * size + size),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+      last: (page + 1) * size >= filtered.length,
     });
   }),
-  // inventory-service (stub): live stock check.
-  http.get(P("/api/inventory/stock/:productId"), ({ params }) => {
-    const product = products.find((p) => p.id === Number(params.productId));
-    return HttpResponse.json({ productId: Number(params.productId), available: product?.stock ?? 0 });
+
+  http.post(P(ENDPOINTS.reviews.list()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      productId?: number;
+      rating?: number;
+      title?: string;
+      comment?: string;
+    };
+    const created = {
+      id: reviews.length + 1,
+      productId: body.productId ?? 0,
+      userId: "11111111-1111-1111-1111-111111111111",
+      rating: body.rating ?? 5,
+      title: body.title ?? null,
+      comment: body.comment ?? null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return HttpResponse.json(created, { status: 201 });
+  }),
+];
+
+/* ----------------------------- notifications -------------------------------- */
+/* notification-service WRAPS everything in the common envelope. */
+
+const notificationHandlers = [
+  http.get(P(ENDPOINTS.notifications.list()), ({ request }) => {
+    const page = Number(new URL(request.url).searchParams.get("page") ?? 0);
+    const size = Number(new URL(request.url).searchParams.get("size") ?? 20);
+    return HttpResponse.json(
+      envelope({ content: [], page, size, totalElements: 0, totalPages: 1, last: true }),
+    );
+  }),
+];
+
+/* ------------------------------- current user ------------------------------- */
+/* user-service WRAPS everything in the common envelope; errors are RFC 9457. */
+
+// A per-session mutable copy so PATCH changes are visible on the next GET.
+const me = { ...currentUser };
+
+const userHandlers = [
+  http.get(P(ENDPOINTS.users.me()), () => HttpResponse.json(envelope(me))),
+
+  http.patch(P(ENDPOINTS.users.me()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      firstName?: string;
+      lastName?: string;
+    };
+
+    if (body.firstName === undefined && body.lastName === undefined) {
+      return HttpResponse.json(
+        { type: "https://errors.ecommerce.com/http-error", title: "Bad Request", status: 400, detail: "Provide at least one of: firstName, lastName" },
+        { status: 400, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+
+    // Deliberate failure fixtures (D6) — user-facing outcomes worth testing.
+    if (body.firstName === "__error__") {
+      return HttpResponse.json(
+        { type: "https://errors.ecommerce.com/upstream-unavailable", title: "Identity Provider Unavailable", status: 503, detail: "The identity provider could not be reached" },
+        { status: 503, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+    if (body.firstName === "__invalid__") {
+      return HttpResponse.json(
+        {
+          type: "https://errors.ecommerce.com/validation",
+          title: "Validation Failed",
+          status: 400,
+          detail: "Request body has validation errors",
+          errors: [{ field: "firstName", message: "firstName must be 1..255 characters when provided" }],
+        },
+        { status: 400, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+
+    if (body.firstName !== undefined) me.firstName = body.firstName;
+    if (body.lastName !== undefined) me.lastName = body.lastName;
+    return HttpResponse.json(envelope(me, "Profile updated"));
   }),
 ];
 
@@ -200,5 +321,8 @@ export const handlers = [
   ...categoryHandlers,
   ...cartHandlers,
   ...orderHandlers,
-  ...stubHandlers,
+  ...inventoryHandlers,
+  ...reviewHandlers,
+  ...notificationHandlers,
+  ...userHandlers,
 ];

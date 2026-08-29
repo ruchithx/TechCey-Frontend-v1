@@ -8,3 +8,4 @@ export {
   SearchPage,
 } from "./pages/pages";
 export { catalogRoutes } from "./catalog.routes";
+export { HeaderSearch } from "./components/header-search";

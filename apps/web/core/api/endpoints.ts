@@ -45,4 +45,31 @@ export const ENDPOINTS = {
     cancel: (id: string) => `${API_V1_PREFIX}/orders/${id}/cancel`,
     remove: (id: string) => `${API_V1_PREFIX}/orders/${id}`, // ADMIN only
   },
+  inventory: {
+    byProductId: (productId: number) => `${API_V1_PREFIX}/inventory/${productId}`,
+    batch: () => `${API_V1_PREFIX}/inventory/batch`, // ?productIds=1,2,3
+  },
+  reviews: {
+    list: () => `${API_V1_PREFIX}/reviews`, // ?productId=&userId=&rating=&page=&size=&sort=
+    summary: () => `${API_V1_PREFIX}/reviews/summary`, // ?productId=
+    byId: (id: number) => `${API_V1_PREFIX}/reviews/${id}`,
+    create: () => `${API_V1_PREFIX}/reviews`,
+    update: (id: number) => `${API_V1_PREFIX}/reviews/${id}`,
+    remove: (id: number) => `${API_V1_PREFIX}/reviews/${id}`,
+  },
+  users: {
+    // Customer self-service only. Every call acts on the authenticated caller —
+    // the user id comes from the gateway-verified token, never a path/param.
+    // Admin user-management endpoints (/api/v1/users, /api/v1/users/{id}) are
+    // owned by a separate feature and deliberately not listed here.
+    me: () => `${API_V1_PREFIX}/users/me`,
+  },
+  notifications: {
+    list: () => `${API_V1_PREFIX}/notifications`, // ?channel=&status=&unreadOnly=&page=&size=
+    unreadCount: () => `${API_V1_PREFIX}/notifications/unread-count`,
+    byId: (id: string) => `${API_V1_PREFIX}/notifications/${id}`,
+    markRead: (id: string) => `${API_V1_PREFIX}/notifications/${id}/read`,
+    markAllRead: () => `${API_V1_PREFIX}/notifications/read-all`,
+    remove: (id: string) => `${API_V1_PREFIX}/notifications/${id}`,
+  },
 } as const;

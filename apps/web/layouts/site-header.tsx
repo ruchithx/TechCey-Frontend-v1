@@ -57,7 +57,7 @@ function AccountMenu({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ cartBadge, searchSlot }: { cartBadge?: ReactNode; searchSlot?: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -69,7 +69,7 @@ export function SiteHeader() {
 
         {/* search slot — filled by catalog feature */}
         <div className="hidden flex-1 md:block">
-          <Slot id="header-search" />
+          <Slot id="header-search">{searchSlot}</Slot>
         </div>
 
         <nav className="ml-auto hidden items-center gap-4 md:flex">
@@ -78,7 +78,7 @@ export function SiteHeader() {
           </Link>
           <Link href="/cart" className="relative inline-flex items-center text-muted-foreground hover:text-foreground" aria-label="Cart">
             <ShoppingCart className="size-5" />
-            <Slot id="cart-badge" />
+            <Slot id="cart-badge">{cartBadge}</Slot>
           </Link>
           <AccountMenu />
         </nav>

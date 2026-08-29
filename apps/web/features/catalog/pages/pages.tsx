@@ -1,11 +1,11 @@
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
 import { CategoryNav } from "../components/home/category-nav";
 import { CtaBanner } from "../components/home/cta-banner";
 import { FeaturedProducts } from "../components/home/featured-products";
 import { HeroSection } from "../components/home/hero-section";
 import { ValueProps } from "../components/home/value-props";
-
-const OWNER = "Catalog";
+import { ProductListView } from "../components/product-list/product-list-view";
+import { ProductDetailView } from "../components/product-detail/product-detail-view";
+import { CategoryDetailView } from "../components/category/category-detail-view";
 
 export function HomePage() {
   return (
@@ -18,15 +18,29 @@ export function HomePage() {
     </div>
   );
 }
+
 export function ProductListPage() {
-  return <FeaturePlaceholder feature="Product Listing" route="/products" owner={OWNER} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-2xl font-bold text-foreground">All products</h1>
+      <ProductListView />
+    </div>
+  );
 }
+
 export function ProductDetailPage() {
-  return <FeaturePlaceholder feature="Product Detail" route="/products/:id" owner={OWNER} />;
+  return <ProductDetailView />;
 }
+
 export function CategoryPage() {
-  return <FeaturePlaceholder feature="Category" route="/categories/:slug" owner={OWNER} />;
+  return <CategoryDetailView />;
 }
+
 export function SearchPage() {
-  return <FeaturePlaceholder feature="Search" route="/search" owner={OWNER} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-2xl font-bold text-foreground">Search</h1>
+      <ProductListView />
+    </div>
+  );
 }
