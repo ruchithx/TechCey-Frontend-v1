@@ -55,6 +55,23 @@ export const env = {
 } as const;
 
 /**
+ * Keycloak's built-in Account Console for realm `ecommerce`, derived from the
+ * OIDC issuer. This is where password, two-factor, active sessions and device
+ * activity are managed — the frontend NEVER handles credentials itself, it just
+ * links the customer to Keycloak's supported self-service surface.
+ *
+ * `accountConsoleUrl` is the console home; `accountSecurityUrl` deep-links to the
+ * "Signing in" (password / 2FA) page.
+ */
+export function getAccountConsoleUrl(): string {
+  return `${env.authIssuer.replace(/\/$/, "")}/account`;
+}
+
+export function getAccountSecurityUrl(): string {
+  return `${getAccountConsoleUrl()}/#/security/signingin`;
+}
+
+/**
  * Runtime auth URIs depend on the browser origin, so they are resolved lazily
  * (window is undefined during SSR / build).
  */

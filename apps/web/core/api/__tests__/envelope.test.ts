@@ -13,6 +13,11 @@ describe("unwrapEnvelope", () => {
     expect(unwrapEnvelope(wrapped)).toEqual({ id: "abc", total: "42.00" });
   });
 
+  it("returns `data` for notification-service's slim { success, data } envelope", () => {
+    const slim = { success: true, data: { content: [], number: 0 } };
+    expect(unwrapEnvelope(slim)).toEqual({ content: [], number: 0 });
+  });
+
   it("returns the body as-is for a bare (product/cart) response", () => {
     const bare = { id: 1, name: "Widget", price: "9.99" };
     expect(unwrapEnvelope(bare)).toEqual(bare);
@@ -46,10 +51,14 @@ describe("unwrapEnvelope", () => {
 });
 
 describe("hasEnvelope", () => {
-  it("detects the envelope shape", () => {
+  it("detects the common envelope shape", () => {
     expect(
       hasEnvelope({ success: true, message: "", data: {}, timestamp: "t" }),
     ).toBe(true);
+  });
+
+  it("detects the slim { success, data } envelope (notification-service)", () => {
+    expect(hasEnvelope({ success: true, data: {} })).toBe(true);
   });
 
   it("rejects bare payloads that merely have a data field", () => {

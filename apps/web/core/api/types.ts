@@ -254,3 +254,74 @@ export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
 }
+
+/**
+ * The authenticated customer's account — `GET /api/v1/customers/me`
+ * (envelope-wrapped). A superset of `CurrentUserResponse`: the identity block is
+ * still sourced from Keycloak / the verified token and is not editable through
+ * the TechCey backend, while `phoneNumber`, `preferredLocale` and
+ * `defaultAddressId` are owned and stored by user-service.
+ */
+export interface CustomerAccountResponse {
+  id: string; // Keycloak user UUID (JWT `sub`)
+  username: string;
+  email: string;
+  emailVerified: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  enabled: boolean;
+  roles: string[];
+  phoneNumber: string | null;
+  preferredLocale: string | null;
+  defaultAddressId: string | null; // UUID of an entry in the address book, or null
+}
+
+/**
+ * Body of `PUT /api/v1/customers/me`. Partial update — a field left `undefined`
+ * is unchanged (a bare PUT must not wipe the Keycloak name). `firstName` /
+ * `lastName` are proxied to Keycloak; the rest are backend-owned. `username`,
+ * `email`, `enabled` and `roles` are Keycloak identity and are NOT editable here.
+ */
+export interface UpdateCustomerAccountRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  preferredLocale?: string;
+  defaultAddressId?: string;
+}
+
+/**
+ * One entry in the customer's saved-address book — `GET /api/v1/customers/me/addresses`.
+ * `isDefault` is derived by the backend from the profile's `defaultAddressId`.
+ * Deliberately separate from order-service's per-order `ShippingAddress` snapshot.
+ */
+export interface AddressResponse {
+  id: string; // UUID
+  label: string | null; // "Home", "Work", …
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: string; // ISO-8601
+  updatedAt: string;
+}
+
+/**
+ * Body of `POST /api/v1/customers/me/addresses` and
+ * `PUT /api/v1/customers/me/addresses/{id}`. Field names mirror order-service's
+ * `ShippingAddressRequest`. The first address a customer saves becomes the
+ * default automatically; `makeDefault` promotes any later one.
+ */
+export interface AddressRequest {
+  label?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  makeDefault?: boolean;
+}

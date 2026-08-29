@@ -64,6 +64,15 @@ export const ENDPOINTS = {
     // owned by a separate feature and deliberately not listed here.
     me: () => `${API_V1_PREFIX}/users/me`,
   },
+  customers: {
+    // Customer self-service, same identity guarantee as `users` above — the id
+    // always comes from the gateway-verified token. This is the RICHER view:
+    // the Keycloak identity block PLUS the backend-owned phoneNumber /
+    // preferredLocale / defaultAddressId, plus the saved-address book.
+    me: () => `${API_V1_PREFIX}/customers/me`,
+    addresses: () => `${API_V1_PREFIX}/customers/me/addresses`,
+    address: (id: string) => `${API_V1_PREFIX}/customers/me/addresses/${id}`,
+  },
   notifications: {
     list: () => `${API_V1_PREFIX}/notifications`, // ?channel=&status=&unreadOnly=&page=&size=
     unreadCount: () => `${API_V1_PREFIX}/notifications/unread-count`,

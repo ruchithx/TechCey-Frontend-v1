@@ -57,4 +57,9 @@ export const queryKeys = {
     all: ["users"] as const,
     me: () => ["users", "me"] as const,
   },
+  customers: {
+    all: ["customers"] as const,
+    me: () => ["customers", "me"] as const,
+    addresses: () => ["customers", "addresses"] as const,
+  },
 } as const;

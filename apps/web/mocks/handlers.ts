@@ -15,10 +15,13 @@ import { http, HttpResponse, delay } from "msw";
 import { env } from "@/core/config/env";
 import { ENDPOINTS } from "@/core/api/endpoints";
 import {
+  addresses as addressFixtures,
   availabilityByProductId,
   cart,
   categories,
   currentUser,
+  customerAccount,
+  notifications as notificationFixtures,
   orders,
   products,
   reviews,
@@ -30,6 +33,11 @@ const P = (path: string) => `${base}${path}`;
 
 function envelope<T>(data: T, message = "Success") {
   return { success: true, message, data, timestamp: new Date().toISOString() };
+}
+
+/** notification-service uses a slim envelope: { success, data } — no message/timestamp. */
+function slimEnvelope<T>(data: T) {
+  return { success: true, data };
 }
 
 /* -------------------------------- products -------------------------------- */
@@ -256,15 +264,45 @@ const reviewHandlers = [
 ];
 
 /* ----------------------------- notifications -------------------------------- */
-/* notification-service WRAPS everything in the common envelope. */
+/* notification-service uses the SLIM envelope { success, data } (no timestamp),
+ * and returns a Spring `Page` where the current page index is `number`. */
+
+const inbox = notificationFixtures.map((n) => ({ ...n }));
 
 const notificationHandlers = [
   http.get(P(ENDPOINTS.notifications.list()), ({ request }) => {
-    const page = Number(new URL(request.url).searchParams.get("page") ?? 0);
-    const size = Number(new URL(request.url).searchParams.get("size") ?? 20);
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 20);
+    const unreadOnly = url.searchParams.get("unreadOnly") === "true";
+    const filtered = unreadOnly ? inbox.filter((n) => !n.readAt) : inbox;
     return HttpResponse.json(
-      envelope({ content: [], page, size, totalElements: 0, totalPages: 1, last: true }),
+      slimEnvelope({
+        content: filtered.slice(page * size, page * size + size),
+        number: page,
+        size,
+        totalElements: filtered.length,
+        totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+        first: page === 0,
+        last: (page + 1) * size >= filtered.length,
+      }),
     );
+  }),
+
+  http.get(P(ENDPOINTS.notifications.unreadCount()), () =>
+    HttpResponse.json(slimEnvelope({ unreadCount: inbox.filter((n) => !n.readAt).length })),
+  ),
+
+  http.patch(P(`${ENDPOINTS.notifications.list()}/:id/read`), ({ params }) => {
+    const n = inbox.find((x) => x.id === params.id);
+    if (n && !n.readAt) n.readAt = new Date().toISOString();
+    return new HttpResponse(null, { status: 200 });
+  }),
+
+  http.patch(P(ENDPOINTS.notifications.markAllRead()), () => {
+    const now = new Date().toISOString();
+    for (const n of inbox) if (!n.readAt) n.readAt = now;
+    return new HttpResponse(null, { status: 200 });
   }),
 ];
 
@@ -316,6 +354,130 @@ const userHandlers = [
   }),
 ];
 
+/* ----------------------------- current customer ---------------------------- */
+/* user-service WRAPS everything in the common envelope; errors are RFC 9457.
+ * `/api/v1/customers/me` is the richer view (identity + phone/locale/default +
+ * address book). Per-session mutable copies so writes show on the next read. */
+
+const account = { ...customerAccount };
+const addressBook = addressFixtures.map((a) => ({ ...a }));
+
+function syncDefault() {
+  for (const a of addressBook) a.isDefault = a.id === account.defaultAddressId;
+}
+
+const customerHandlers = [
+  http.get(P(ENDPOINTS.customers.me()), () => HttpResponse.json(envelope(account))),
+
+  http.put(P(ENDPOINTS.customers.me()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Partial<{
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      preferredLocale: string;
+      defaultAddressId: string;
+    }>;
+
+    if (Object.keys(body).length === 0) {
+      return HttpResponse.json(
+        { type: "about:blank", title: "Bad Request", status: 400, detail: "Provide at least one field" },
+        { status: 400, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+    if (body.firstName === "__error__") {
+      return HttpResponse.json(
+        { type: "about:blank", title: "Identity Provider Unavailable", status: 503, detail: "The identity provider could not be reached" },
+        { status: 503, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+    if (
+      body.defaultAddressId !== undefined &&
+      !addressBook.some((a) => a.id === body.defaultAddressId)
+    ) {
+      return HttpResponse.json(
+        { type: "about:blank", title: "Bad Request", status: 400, detail: "defaultAddressId is not one of your saved addresses" },
+        { status: 400, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+
+    if (body.firstName !== undefined) account.firstName = body.firstName || null;
+    if (body.lastName !== undefined) account.lastName = body.lastName || null;
+    if (body.phoneNumber !== undefined) account.phoneNumber = body.phoneNumber || null;
+    if (body.preferredLocale !== undefined) account.preferredLocale = body.preferredLocale || null;
+    if (body.defaultAddressId !== undefined) {
+      account.defaultAddressId = body.defaultAddressId;
+      syncDefault();
+    }
+    return HttpResponse.json(envelope(account, "Profile updated"));
+  }),
+
+  http.get(P(ENDPOINTS.customers.addresses()), () => HttpResponse.json(envelope(addressBook))),
+
+  http.post(P(ENDPOINTS.customers.addresses()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const now = new Date().toISOString();
+    const created = {
+      id: `aaaaaaa1-0000-0000-0000-${String(Date.now()).slice(-12).padStart(12, "0")}`,
+      label: (body.label as string) ?? null,
+      line1: (body.line1 as string) ?? "",
+      line2: (body.line2 as string) ?? null,
+      city: (body.city as string) ?? "",
+      state: (body.state as string) ?? "",
+      zip: (body.zip as string) ?? "",
+      country: (body.country as string) ?? "US",
+      isDefault: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    addressBook.push(created);
+    if (body.makeDefault === true || addressBook.length === 1) {
+      account.defaultAddressId = created.id;
+      syncDefault();
+    }
+    return HttpResponse.json(envelope(created, "Created"), { status: 201 });
+  }),
+
+  http.put(P(`${ENDPOINTS.customers.addresses()}/:id`), async ({ params, request }) => {
+    const existing = addressBook.find((a) => a.id === params.id);
+    if (!existing) {
+      return HttpResponse.json(
+        { type: "about:blank", title: "Not Found", status: 404, detail: "No address with that id" },
+        { status: 404, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    existing.label = (body.label as string) ?? null;
+    existing.line1 = (body.line1 as string) ?? existing.line1;
+    existing.line2 = (body.line2 as string) ?? null;
+    existing.city = (body.city as string) ?? existing.city;
+    existing.state = (body.state as string) ?? existing.state;
+    existing.zip = (body.zip as string) ?? existing.zip;
+    existing.country = (body.country as string) ?? existing.country;
+    existing.updatedAt = new Date().toISOString();
+    if (body.makeDefault === true) {
+      account.defaultAddressId = existing.id;
+      syncDefault();
+    }
+    return HttpResponse.json(envelope(existing, "Address updated"));
+  }),
+
+  http.delete(P(`${ENDPOINTS.customers.addresses()}/:id`), ({ params }) => {
+    const idx = addressBook.findIndex((a) => a.id === params.id);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { type: "about:blank", title: "Not Found", status: 404, detail: "No address with that id" },
+        { status: 404, headers: { "Content-Type": "application/problem+json" } },
+      );
+    }
+    const [removed] = addressBook.splice(idx, 1);
+    if (removed && account.defaultAddressId === removed.id) {
+      account.defaultAddressId = null;
+      syncDefault();
+    }
+    return HttpResponse.json(envelope(null, "No Content"));
+  }),
+];
+
 export const handlers = [
   ...productHandlers,
   ...categoryHandlers,
@@ -325,4 +487,5 @@ export const handlers = [
   ...reviewHandlers,
   ...notificationHandlers,
   ...userHandlers,
+  ...customerHandlers,
 ];

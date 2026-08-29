@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { formatMoney } from "@/core/api";
 import { useAuth } from "@/core/auth";
 import { QueryState, EmptyState } from "@/components/shared/data-state";

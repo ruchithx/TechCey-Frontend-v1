@@ -5,10 +5,13 @@
  */
 
 import type {
+  AddressResponse,
   AvailabilityResponse,
   CartResponse,
   CategoryResponse,
   CurrentUserResponse,
+  CustomerAccountResponse,
+  NotificationResponse,
   OrderResponse,
   ReviewResponse,
   ReviewSummaryResponse,
@@ -204,5 +207,81 @@ export const currentUser: CurrentUserResponse = {
   enabled: true,
   roles: ["CUSTOMER"],
 };
+
+/** Saved-address book — mirrors user-service `AddressResponse`, oldest first. */
+export const addresses: AddressResponse[] = [
+  {
+    id: "aaaaaaa1-0000-0000-0000-000000000001",
+    label: "Home",
+    line1: "100 Market St",
+    line2: "Apt 4B",
+    city: "Springfield",
+    state: "CA",
+    zip: "90210",
+    country: "US",
+    isDefault: true,
+    createdAt: "2025-02-01T09:00:00Z",
+    updatedAt: "2025-02-01T09:00:00Z",
+  },
+  {
+    id: "aaaaaaa1-0000-0000-0000-000000000002",
+    label: "Work",
+    line1: "500 Enterprise Way",
+    line2: null,
+    city: "Metropolis",
+    state: "NY",
+    zip: "10001",
+    country: "US",
+    isDefault: false,
+    createdAt: "2025-03-15T09:00:00Z",
+    updatedAt: "2025-03-15T09:00:00Z",
+  },
+];
+
+/**
+ * The signed-in customer's account — mirrors user-service `CustomerAccountResponse`
+ * (`GET /api/v1/customers/me`): the Keycloak identity block plus the
+ * backend-owned phone / locale / defaultAddressId.
+ */
+export const customerAccount: CustomerAccountResponse = {
+  ...currentUser,
+  phoneNumber: "+1 555 010 2003",
+  preferredLocale: "en-US",
+  defaultAddressId: addresses[0]!.id,
+};
+
+/** A few IN_APP notifications — mirrors notification-service list items (bodyPreview set, body null). */
+export const notifications: NotificationResponse[] = [
+  {
+    id: "bbbbbbb1-0000-0000-0000-000000000001",
+    channel: "IN_APP",
+    templateCode: "ORDER_CONFIRMATION",
+    subject: "Your order ORD-170700010 is confirmed",
+    bodyPreview: "Thanks! We're getting your order ready for dispatch.",
+    body: null,
+    recipient: "d***@example.com",
+    status: "SENT",
+    referenceType: "ORDER",
+    referenceId: "00000000-0000-0000-0000-000000000001",
+    readAt: null,
+    sentAt: "2025-04-01T12:05:00Z",
+    createdAt: "2025-04-01T12:05:00Z",
+  },
+  {
+    id: "bbbbbbb1-0000-0000-0000-000000000002",
+    channel: "IN_APP",
+    templateCode: "SHIPMENT_UPDATE",
+    subject: "Your order has shipped",
+    bodyPreview: "Track your parcel from the orders page.",
+    body: null,
+    recipient: "d***@example.com",
+    status: "SENT",
+    referenceType: "ORDER",
+    referenceId: "00000000-0000-0000-0000-000000000003",
+    readAt: "2025-04-03T08:00:00Z",
+    sentAt: "2025-04-02T18:00:00Z",
+    createdAt: "2025-04-02T18:00:00Z",
+  },
+];
 
 export { MOCK_USER_ID };
