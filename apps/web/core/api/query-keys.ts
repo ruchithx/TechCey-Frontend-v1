@@ -12,7 +12,12 @@
  * Example invalidate: queryClient.invalidateQueries({ queryKey: queryKeys.cart.all })
  */
 
-import type { OrderListParams, ProductListParams } from "@/core/api/types";
+import type {
+  NotificationListParams,
+  OrderListParams,
+  ProductListParams,
+  ReviewListParams,
+} from "@/core/api/types";
 
 export const queryKeys = {
   products: {
@@ -32,5 +37,29 @@ export const queryKeys = {
     all: ["orders"] as const,
     list: (filters?: OrderListParams) => ["orders", "list", filters ?? {}] as const,
     detail: (id: string) => ["orders", "detail", id] as const,
+  },
+  inventory: {
+    all: ["inventory"] as const,
+    byProductId: (productId: number) => ["inventory", "detail", productId] as const,
+    batch: (productIds: number[]) => ["inventory", "batch", [...productIds].sort((a, b) => a - b)] as const,
+  },
+  reviews: {
+    all: ["reviews"] as const,
+    list: (filters?: ReviewListParams) => ["reviews", "list", filters ?? {}] as const,
+    summary: (productId: number) => ["reviews", "summary", productId] as const,
+  },
+  notifications: {
+    all: ["notifications"] as const,
+    list: (filters?: NotificationListParams) => ["notifications", "list", filters ?? {}] as const,
+    unreadCount: () => ["notifications", "unread-count"] as const,
+  },
+  users: {
+    all: ["users"] as const,
+    me: () => ["users", "me"] as const,
+  },
+  customers: {
+    all: ["customers"] as const,
+    me: () => ["customers", "me"] as const,
+    addresses: () => ["customers", "addresses"] as const,
   },
 } as const;

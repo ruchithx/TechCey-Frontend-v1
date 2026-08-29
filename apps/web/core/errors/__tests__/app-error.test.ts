@@ -33,6 +33,16 @@ describe("mapHttpError", () => {
     expect(mapHttpError(403, {}).message).toMatch(/permission/i);
   });
 
+  it("uses RFC 9457 `detail` when there is no `message` (problem+json)", () => {
+    const err = mapHttpError(503, {
+      type: "https://errors.ecommerce.com/upstream-unavailable",
+      title: "Identity Provider Unavailable",
+      status: 503,
+      detail: "The identity provider could not be reached",
+    });
+    expect(err.message).toBe("The identity provider could not be reached");
+  });
+
   it("reads the order-service ErrorResponse shape (errorCode/errors)", () => {
     const err = mapHttpError(400, {
       success: false,
@@ -43,6 +53,24 @@ describe("mapHttpError", () => {
     expect(err.fieldErrors).toEqual({
       name: "must not be blank",
       price: "must be positive",
+    });
+  });
+
+  it("reads the RFC 9457 validation shape (errors: [{field, message}])", () => {
+    const err = mapHttpError(400, {
+      type: "https://errors.ecommerce.com/validation",
+      title: "Validation Failed",
+      status: 400,
+      detail: "Request body has validation errors",
+      errors: [
+        { field: "firstName", message: "must be 1..255 characters when provided" },
+        { field: "lastName", message: "must not be blank" },
+      ],
+    });
+    expect(err.code).toBe("VALIDATION");
+    expect(err.fieldErrors).toEqual({
+      firstName: "must be 1..255 characters when provided",
+      lastName: "must not be blank",
     });
   });
 

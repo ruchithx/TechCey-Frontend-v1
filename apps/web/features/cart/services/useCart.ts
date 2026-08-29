@@ -1,41 +1,18 @@
-"use client";
-
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ENDPOINTS, queryKeys, request, type CartResponse } from "@/core/api";
+import { useAuth } from "@/core/auth";
 
+/**
+ * The current user's cart. cart-service has no anonymous-cart endpoint — every
+ * route requires a bearer token — so this is disabled entirely for signed-out
+ * visitors rather than faking a guest cart the backend can't support.
+ */
 export function useCart() {
+  const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: queryKeys.cart.all,
     queryFn: () => request<CartResponse>(ENDPOINTS.cart.get()),
-    staleTime: 30_000,
-  });
-}
-
-export function useRemoveFromCart() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (productId: number) =>
-      request<CartResponse>(ENDPOINTS.cart.removeItem(productId), { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cart.all }),
-  });
-}
-
-export function useUpdateCartItem() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) =>
-      request<CartResponse>(ENDPOINTS.cart.updateItem(productId), {
-        method: "PUT",
-        body: { quantity },
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cart.all }),
-  });
-}
-
-export function useClearCart() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => request<CartResponse>(ENDPOINTS.cart.clear(), { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cart.all }),
+    enabled: isAuthenticated,
+    staleTime: 10_000,
   });
 }

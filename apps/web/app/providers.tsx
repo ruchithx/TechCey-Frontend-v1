@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { makeQueryClient } from "@/core/api/query-client";
 import { AuthProvider } from "@/core/auth";
+import { ToastProvider } from "@/components/shared/toast";
 import { startMocks } from "@/mocks/start";
 import { env } from "@/core/config/env";
 
@@ -29,7 +30,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </AuthProvider>
       {env.isDevelopment ? <ReactQueryDevtools initialIsOpen={false} /> : null}
     </QueryClientProvider>
   );

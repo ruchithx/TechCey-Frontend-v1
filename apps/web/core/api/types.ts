@@ -1,8 +1,9 @@
 /**
  * Backend data contracts (DTOs).
  *
- * TODO(openapi): These are hand-written from the task brief §1 to match the live
- * DB schema. Replace with generated types once services are reachable:
+ * Verified directly against the live backend source (TechCey-Backend, sibling repo)
+ * on 2026-08-27 — these are no longer guesses from the task brief. Replace with
+ * generated types once services are reachable via OpenAPI:
  *   pnpm --filter web api:types   (see package.json — generates from /api-docs)
  * Do not let three developers hand-type these three different ways.
  *
@@ -14,6 +15,14 @@ import type { Money } from "@/core/api/money";
 
 /* ------------------------------- product-service ------------------------------- */
 
+export interface CategoryResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ProductResponse {
   id: number; // BIGSERIAL
   name: string;
@@ -21,17 +30,9 @@ export interface ProductResponse {
   price: Money; // NUMERIC(12,2) as string
   imageUrl: string | null; // nullable — always needs a fallback
   stock: number;
-  categoryId: number;
-  /** Nested object returned by the real product-service (absent in MSW mocks). */
-  category?: { id: number; name: string; description: string | null };
+  category: CategoryResponse; // embedded, not a bare categoryId
   createdAt: string; // ISO-8601
   updatedAt: string;
-}
-
-export interface CategoryResponse {
-  id: number;
-  name: string;
-  description: string | null;
 }
 
 /** product list query params (mirror product-service). */
@@ -50,25 +51,38 @@ export interface ProductListParams {
 export interface CartItemResponse {
   productId: number;
   productName: string;
-  imageUrl: string | null;
   unitPrice: Money;
   quantity: number;
-  subtotal: Money;
+  lineTotal: Money;
 }
 
 export interface CartResponse {
   userId: string;
   items: CartItemResponse[];
-  totalAmount: Money;
-  itemCount: number;
+  totalQuantity: number;
+  totalPrice: Money;
 }
 
-/* ------------------------------- order-service -------------------------------- */
+export interface AddCartItemRequest {
+  productId: number;
+  quantity: number;
+}
 
-export type OrderStatus = "PENDING" | "CONFIRMED" | "PAID" | "CANCELLED" | "FAILED";
+export interface UpdateCartItemRequest {
+  quantity: number;
+}
+
+export interface MergeCartRequest {
+  items: AddCartItemRequest[];
+}
+
+/* ------------------------------- order-service --------------------------------- */
+
+export type OrderStatus = "PENDING" | "AWAITING_PAYMENT" | "CONFIRMED" | "PAID" | "CANCELLED" | "FAILED";
 
 export const ORDER_STATUSES: readonly OrderStatus[] = [
   "PENDING",
+  "AWAITING_PAYMENT",
   "CONFIRMED",
   "PAID",
   "CANCELLED",
@@ -85,6 +99,7 @@ export interface ShippingAddress {
 }
 
 export interface OrderItemResponse {
+  id: string; // UUID
   productId: number;
   productName: string; // snapshot at order time
   productSku: string; // snapshot at order time
@@ -96,7 +111,7 @@ export interface OrderItemResponse {
 export interface OrderResponse {
   id: string; // UUID
   orderNumber: string; // ORD-<timestamp>-<6-char-random>
-  userId: string; // UUID
+  customerId: string; // UUID
   status: OrderStatus;
   totalAmount: Money;
   shippingAddress: ShippingAddress;
@@ -110,4 +125,203 @@ export interface OrderListParams {
   status?: OrderStatus;
   page?: number; // default 0
   size?: number; // default 20
+}
+
+/** One line of a checkout request. NOTE: product-service has no SKU field —
+ * see features/checkout/README.md for how productSku is derived. */
+export interface OrderItemRequest {
+  productId: number;
+  productName: string;
+  productSku: string;
+  unitPrice: string; // Money as plain string on the wire
+  quantity: number;
+}
+
+export interface CreateOrderRequest {
+  items: OrderItemRequest[];
+  shippingAddress: ShippingAddress;
+  notes?: string | null;
+}
+
+/* ------------------------------ inventory-service ------------------------------- */
+
+/** Compact availability line — what product listing/detail pages need. */
+export interface AvailabilityResponse {
+  productId: number;
+  quantityAvailable: number;
+  inStock: boolean;
+  lowStock: boolean;
+}
+
+/* -------------------------------- review-service --------------------------------- */
+
+export interface ReviewResponse {
+  id: number;
+  productId: number;
+  userId: string;
+  rating: number; // 1-5
+  title: string | null;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewSummaryResponse {
+  productId: number;
+  averageRating: number;
+  totalReviews: number;
+  ratingBreakdown: Record<number, number>; // keyed 1..5
+}
+
+export interface ReviewListParams {
+  productId?: number;
+  userId?: string;
+  rating?: number;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface CreateReviewRequest {
+  productId: number;
+  rating: number;
+  title?: string;
+  comment?: string;
+}
+
+export interface UpdateReviewRequest {
+  rating: number;
+  title?: string;
+  comment?: string;
+}
+
+/* ----------------------------- notification-service ------------------------------ */
+
+export type NotificationChannel = "EMAIL" | "SMS" | "PUSH" | "IN_APP";
+export type NotificationStatus = "PENDING" | "SENT" | "FAILED";
+
+export interface NotificationResponse {
+  id: string; // UUID
+  channel: NotificationChannel;
+  templateCode: string;
+  subject: string;
+  bodyPreview: string | null; // list view only
+  body: string | null; // detail view only
+  recipient: string; // masked
+  status: NotificationStatus;
+  referenceType: string | null;
+  referenceId: string | null;
+  readAt: string | null;
+  sentAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListParams {
+  channel?: NotificationChannel;
+  status?: NotificationStatus;
+  unreadOnly?: boolean;
+  page?: number;
+  size?: number;
+}
+
+/* ------------------------------- user-service --------------------------------- */
+
+/**
+ * The authenticated caller's own profile — `GET /api/v1/users/me`.
+ *
+ * `id` and `roles` are derived from the gateway-verified Keycloak token; the
+ * remaining fields are read live from Keycloak (user-service stores nothing).
+ * `firstName` / `lastName` can be null for accounts that never set them.
+ * There is no endpoint to request another user through this contract.
+ */
+export interface CurrentUserResponse {
+  id: string; // Keycloak user UUID (JWT `sub`)
+  username: string;
+  email: string;
+  emailVerified: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  enabled: boolean;
+  roles: string[]; // realm roles from the verified token
+}
+
+/**
+ * Body of `PATCH /api/v1/users/me`. A customer may change only their own display
+ * name; send at least one field, each 1..255 characters. `username`, `email`,
+ * `enabled` and `roles` are managed by Keycloak and are NOT editable here.
+ */
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * The authenticated customer's account — `GET /api/v1/customers/me`
+ * (envelope-wrapped). A superset of `CurrentUserResponse`: the identity block is
+ * still sourced from Keycloak / the verified token and is not editable through
+ * the TechCey backend, while `phoneNumber`, `preferredLocale` and
+ * `defaultAddressId` are owned and stored by user-service.
+ */
+export interface CustomerAccountResponse {
+  id: string; // Keycloak user UUID (JWT `sub`)
+  username: string;
+  email: string;
+  emailVerified: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  enabled: boolean;
+  roles: string[];
+  phoneNumber: string | null;
+  preferredLocale: string | null;
+  defaultAddressId: string | null; // UUID of an entry in the address book, or null
+}
+
+/**
+ * Body of `PUT /api/v1/customers/me`. Partial update — a field left `undefined`
+ * is unchanged (a bare PUT must not wipe the Keycloak name). `firstName` /
+ * `lastName` are proxied to Keycloak; the rest are backend-owned. `username`,
+ * `email`, `enabled` and `roles` are Keycloak identity and are NOT editable here.
+ */
+export interface UpdateCustomerAccountRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  preferredLocale?: string;
+  defaultAddressId?: string;
+}
+
+/**
+ * One entry in the customer's saved-address book — `GET /api/v1/customers/me/addresses`.
+ * `isDefault` is derived by the backend from the profile's `defaultAddressId`.
+ * Deliberately separate from order-service's per-order `ShippingAddress` snapshot.
+ */
+export interface AddressResponse {
+  id: string; // UUID
+  label: string | null; // "Home", "Work", …
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: string; // ISO-8601
+  updatedAt: string;
+}
+
+/**
+ * Body of `POST /api/v1/customers/me/addresses` and
+ * `PUT /api/v1/customers/me/addresses/{id}`. Field names mirror order-service's
+ * `ShippingAddressRequest`. The first address a customer saves becomes the
+ * default automatically; `makeDefault` promotes any later one.
+ */
+export interface AddressRequest {
+  label?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  makeDefault?: boolean;
 }

@@ -1,31 +1,38 @@
 /**
  * Response envelope handling.
  *
- * order-service wraps every response in the shared `common` envelope:
- *   { success, message, data, timestamp }
- * product-service and cart-service return bare payloads.
+ * Three backend shapes exist:
+ *   - order / inventory / payment / user — shared `common` envelope:
+ *       { success, message, data, timestamp }
+ *   - notification — slim envelope: { success, data }   (no message/timestamp)
+ *   - product / review / cart — bare payload, no wrapper at all
  *
- * `unwrapEnvelope` transparently returns `data` for wrapped responses and the
- * body as-is for bare ones, so no feature code ever knows the difference.
- * Kept as a pure function so it is trivially unit-testable (see __tests__).
+ * `unwrapEnvelope` transparently returns `data` for the first two and the body
+ * as-is for bare ones, so no feature code ever knows the difference. Kept as a
+ * pure function so it is trivially unit-testable (see __tests__).
  */
 
 import { mapHttpError, type AppError } from "@/core/errors/app-error";
 
 interface Envelope {
   success: boolean;
-  message: string;
+  message?: string;
   data: unknown;
-  timestamp: string;
+  timestamp?: string;
 }
 
+/**
+ * Detects both the common `{success,message,data,timestamp}` envelope and
+ * notification-service's slim `{success,data}` one. A bare DTO from
+ * product/review/cart never carries a boolean `success`, so this stays
+ * unambiguous.
+ */
 export function hasEnvelope(body: unknown): body is Envelope {
   return (
     typeof body === "object" &&
     body !== null &&
     "success" in body &&
     "data" in body &&
-    "timestamp" in body &&
     typeof (body as Record<string, unknown>).success === "boolean"
   );
 }

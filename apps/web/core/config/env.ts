@@ -31,11 +31,9 @@ export const env = {
   /**
    * Public SPA client id (Authorization Code + PKCE).
    *
-   * ⚠️ NEEDS VERIFICATION (see FRONTEND_DEVELOPER_GUIDE.md → Blockers).
-   * The realm currently ships a `gateway-client`. A browser SPA needs a PUBLIC
-   * client with PKCE, this app's origin in Valid Redirect URIs + Web Origins.
-   * If no such client exists, one (e.g. `techcey-spa`) must be added to the
-   * backend's keycloak/ecommerce-realm.json. We do NOT edit the backend repo.
+   * Verified against keycloak/ecommerce-realm.json (TechCey-Backend, 2026-08-27):
+   * `techcey-spa` exists, is a public client with PKCE (S256), and has
+   * redirectUris/webOrigins set to http://localhost:3000 — matches this app.
    */
   authClientId: readEnv(process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID, "techcey-spa"),
 
@@ -60,6 +58,23 @@ export const env = {
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV === "development",
 } as const;
+
+/**
+ * Keycloak's built-in Account Console for realm `ecommerce`, derived from the
+ * OIDC issuer. This is where password, two-factor, active sessions and device
+ * activity are managed — the frontend NEVER handles credentials itself, it just
+ * links the customer to Keycloak's supported self-service surface.
+ *
+ * `accountConsoleUrl` is the console home; `accountSecurityUrl` deep-links to the
+ * "Signing in" (password / 2FA) page.
+ */
+export function getAccountConsoleUrl(): string {
+  return `${env.authIssuer.replace(/\/$/, "")}/account`;
+}
+
+export function getAccountSecurityUrl(): string {
+  return `${getAccountConsoleUrl()}/#/security/signingin`;
+}
 
 /**
  * Runtime auth URIs depend on the browser origin, so they are resolved lazily

@@ -1,9 +1,9 @@
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
-import { OrderListPage as OrderList } from "../components/orders-page";
+import { OrderListView } from "../components/order-list-view";
+import { OrderDetailView } from "../components/order-detail-view";
 
 export function OrderListPage() {
-  return <OrderList />;
+  return <OrderListView />;
 }
 export function OrderDetailPage() {
-  return <FeaturePlaceholder feature="Order Detail" route="/orders/:id" owner="Orders" />;
+  return <OrderDetailView />;
 }

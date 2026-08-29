@@ -64,8 +64,15 @@ export function isAppError(value: unknown): value is AppError {
 export function mapHttpError(status: number, body: unknown): AppError {
   const record = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
 
+  // `message` — order/cart/product error shapes. `detail` — RFC 9457
+  // `application/problem+json` from the shared `common` handler (user-service,
+  // and order-service's ResponseStatusException path).
   const backendMessage =
-    typeof record.message === "string" ? record.message : undefined;
+    typeof record.message === "string"
+      ? record.message
+      : typeof record.detail === "string"
+        ? record.detail
+        : undefined;
   const backendCode =
     typeof record.errorCode === "string"
       ? record.errorCode
@@ -132,8 +139,21 @@ function extractFieldErrors(record: Record<string, unknown>): Record<string, str
   const source = record.errors ?? record.fieldErrors;
   if (typeof source !== "object" || source === null) return undefined;
   const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(source as Record<string, unknown>)) {
-    if (typeof value === "string") out[key] = value;
+
+  if (Array.isArray(source)) {
+    // RFC 9457 shape from the shared `common` GlobalExceptionHandler:
+    //   "errors": [ { "field": "firstName", "message": "must be 1..255" } ]
+    for (const entry of source) {
+      if (typeof entry !== "object" || entry === null) continue;
+      const { field, message } = entry as Record<string, unknown>;
+      if (typeof field === "string" && typeof message === "string") out[field] = message;
+    }
+  } else {
+    // order-service ErrorResponse shape: { "firstName": "must be 1..255", ... }
+    for (const [key, value] of Object.entries(source as Record<string, unknown>)) {
+      if (typeof value === "string") out[key] = value;
+    }
   }
+
   return Object.keys(out).length > 0 ? out : undefined;
 }
