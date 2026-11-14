@@ -85,7 +85,7 @@ export const cart: CartResponse = {
       imageUrl: products[0]!.imageUrl,
       unitPrice: products[0]!.price,
       quantity: 1,
-      subtotal: products[0]!.price,
+      lineTotal: products[0]!.price,
     },
     {
       productId: 6,
@@ -93,11 +93,11 @@ export const cart: CartResponse = {
       imageUrl: products[5]!.imageUrl,
       unitPrice: products[5]!.price,
       quantity: 2,
-      subtotal: money(Number(products[5]!.price) * 2),
+      lineTotal: money(Number(products[5]!.price) * 2),
     },
   ],
-  totalAmount: money(Number(products[0]!.price) + Number(products[5]!.price) * 2),
-  itemCount: 3,
+  totalPrice: money(Number(products[0]!.price) + Number(products[5]!.price) * 2),
+  totalQuantity: 3,
 };
 
 export const orders: OrderResponse[] = [

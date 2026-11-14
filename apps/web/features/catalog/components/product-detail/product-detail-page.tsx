@@ -14,8 +14,8 @@ import { formatMoney, request, ENDPOINTS, type OrderResponse } from "@/core/api"
 import { toMoney } from "@/core/api/money";
 import { useProduct } from "../../services/useProduct";
 import { useProductReviews, type ReviewItem } from "../../services/useProductReviews";
-import { useAddToCart } from "@/features/cart/services/useAddToCart";
-import { CheckoutDialog, type CheckoutItem } from "@/features/checkout/components/checkout-dialog";
+import { useAddToCart } from "@/core/cart";
+import { CheckoutDialog, type CheckoutItem } from "@/components/checkout-dialog";
 
 /* --------------------------------- Stars ---------------------------------- */
 
@@ -27,7 +27,7 @@ function StarRow({ rating }: { rating: number }) {
         <Star
           key={n}
           aria-hidden
-          className={`size-4 ${n <= filled ? "fill-amber-400 text-amber-400" : "text-border"}`}
+          className={`size-4 ${n <= filled ? "fill-accent text-accent" : "text-border"}`}
         />
       ))}
     </div>

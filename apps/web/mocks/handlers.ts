@@ -14,7 +14,13 @@
 import { http, HttpResponse, delay } from "msw";
 import { env } from "@/core/config/env";
 import { ENDPOINTS } from "@/core/api/endpoints";
+import { toMoney } from "@/core/api/money";
+import type { CartResponse, ProductRequest, CategoryRequest } from "@/core/api/types";
 import { cart, categories, orders, products } from "@/mocks/fixtures";
+
+// Running ID counters — start above the fixture ceiling so new items never clash.
+let nextProductId = 100;
+let nextCategoryId = 20;
 
 const base = env.apiBaseUrl;
 const P = (path: string) => `${base}${path}`;
@@ -63,6 +69,64 @@ const productHandlers = [
     }
     return HttpResponse.json(product);
   }),
+
+  http.post(P(ENDPOINTS.products.create()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Partial<ProductRequest>;
+    if (!body.name?.trim()) {
+      return HttpResponse.json({ error: "BAD_REQUEST", message: "name is required" }, { status: 400 });
+    }
+    const category = categories.find((c) => c.id === Number(body.categoryId));
+    const now = new Date().toISOString();
+    const product = {
+      id: nextProductId++,
+      name: body.name.trim(),
+      description: body.description ?? null,
+      price: toMoney(String(body.price ?? "0")),
+      imageUrl: body.imageUrl ?? null,
+      stock: body.stock ?? 0,
+      categoryId: Number(body.categoryId ?? 0),
+      category: category ? { id: category.id, name: category.name, description: category.description } : undefined,
+      createdAt: now,
+      updatedAt: now,
+    };
+    products.push(product);
+    return HttpResponse.json(product, { status: 201 });
+  }),
+
+  http.put(P(`${ENDPOINTS.products.list()}/:id`), async ({ params, request }) => {
+    const id = Number(params.id);
+    const idx = products.findIndex((p) => p.id === id);
+    if (idx === -1) {
+      return HttpResponse.json({ error: "NOT_FOUND", message: "Product not found" }, { status: 404 });
+    }
+    const body = (await request.json().catch(() => ({}))) as Partial<ProductRequest>;
+    const category = categories.find((c) => c.id === Number(body.categoryId));
+    const updated = {
+      ...products[idx]!,
+      name: body.name?.trim() ?? products[idx]!.name,
+      description: body.description ?? null,
+      price: toMoney(String(body.price ?? products[idx]!.price)),
+      imageUrl: body.imageUrl ?? null,
+      stock: body.stock ?? products[idx]!.stock,
+      categoryId: Number(body.categoryId ?? products[idx]!.categoryId),
+      category: category
+        ? { id: category.id, name: category.name, description: category.description }
+        : products[idx]!.category,
+      updatedAt: new Date().toISOString(),
+    };
+    products[idx] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  http.delete(P(`${ENDPOINTS.products.list()}/:id`), ({ params }) => {
+    const id = Number(params.id);
+    const idx = products.findIndex((p) => p.id === id);
+    if (idx === -1) {
+      return HttpResponse.json({ error: "NOT_FOUND", message: "Product not found" }, { status: 404 });
+    }
+    products.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];
 
 /* ------------------------------- categories ------------------------------- */
@@ -75,12 +139,95 @@ const categoryHandlers = [
       ? HttpResponse.json(category)
       : HttpResponse.json({ error: "NOT_FOUND", message: "Category not found" }, { status: 404 });
   }),
+
+  http.post(P(ENDPOINTS.categories.create()), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Partial<CategoryRequest>;
+    if (!body.name?.trim()) {
+      return HttpResponse.json({ error: "BAD_REQUEST", message: "name is required" }, { status: 400 });
+    }
+    const category = {
+      id: nextCategoryId++,
+      name: body.name.trim(),
+      description: body.description ?? null,
+    };
+    categories.push(category);
+    return HttpResponse.json(category, { status: 201 });
+  }),
+
+  http.put(P(`${ENDPOINTS.categories.list()}/:id`), async ({ params, request }) => {
+    const id = Number(params.id);
+    const idx = categories.findIndex((c) => c.id === id);
+    if (idx === -1) {
+      return HttpResponse.json({ error: "NOT_FOUND", message: "Category not found" }, { status: 404 });
+    }
+    const body = (await request.json().catch(() => ({}))) as Partial<CategoryRequest>;
+    const updated = {
+      ...categories[idx]!,
+      name: body.name?.trim() ?? categories[idx]!.name,
+      description: body.description ?? null,
+    };
+    categories[idx] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  http.delete(P(`${ENDPOINTS.categories.list()}/:id`), ({ params }) => {
+    const id = Number(params.id);
+    const idx = categories.findIndex((c) => c.id === id);
+    if (idx === -1) {
+      return HttpResponse.json({ error: "NOT_FOUND", message: "Category not found" }, { status: 404 });
+    }
+    categories.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];
 
 /* ---------------------------------- cart ---------------------------------- */
 
+function getInitialMockCart(): CartResponse {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.sessionStorage.getItem("techcey_mock_cart");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {
+    userId: cart.userId,
+    items: cart.items.map((i) => ({ ...i })),
+    totalPrice: cart.totalPrice,
+    totalQuantity: cart.totalQuantity,
+  };
+}
+
+const mockCart: CartResponse = getInitialMockCart();
+
+function persistMockCart() {
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.setItem("techcey_mock_cart", JSON.stringify(mockCart));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function recalculateMockCart() {
+  let count = 0;
+  let total = 0;
+  for (const item of mockCart.items) {
+    count += item.quantity;
+    total += parseFloat(item.lineTotal);
+  }
+  mockCart.totalQuantity = count;
+  mockCart.totalPrice = toMoney(total.toFixed(2));
+  persistMockCart();
+}
+
 const cartHandlers = [
-  http.get(P(ENDPOINTS.cart.get()), () => HttpResponse.json(cart)),
+  http.get(P(ENDPOINTS.cart.get()), () => HttpResponse.json(mockCart)),
 
   http.post(P(ENDPOINTS.cart.addItem()), async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
@@ -88,8 +235,51 @@ const cartHandlers = [
       quantity?: number;
     };
     const product = products.find((p) => p.id === body.productId);
-    const quantity = body.quantity ?? 1;
+    if (!product) {
+      return HttpResponse.json({ error: "NOT_FOUND", message: "Product not found", status: 404 }, { status: 404 });
+    }
+    const quantity = Math.max(1, body.quantity ?? 1);
+    const existingIndex = mockCart.items.findIndex((i) => i.productId === product.id);
+    const existing = existingIndex >= 0 ? mockCart.items[existingIndex] : undefined;
+    const totalQty = (existing?.quantity ?? 0) + quantity;
+
     // 409 insufficient-stock failure fixture (D6) — a user-facing outcome.
+    if (totalQty > product.stock) {
+      return HttpResponse.json(
+        {
+          error: "INSUFFICIENT_STOCK",
+          errorCode: "INSUFFICIENT_STOCK",
+          message: `Only ${product.stock} left in stock`,
+          status: 409,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (existing) {
+      existing.quantity = totalQty;
+      existing.lineTotal = toMoney((parseFloat(product.price) * totalQty).toFixed(2));
+    } else {
+      mockCart.items.push({
+        productId: product.id,
+        productName: product.name,
+        imageUrl: product.imageUrl,
+        unitPrice: product.price,
+        quantity,
+        lineTotal: toMoney((parseFloat(product.price) * quantity).toFixed(2)),
+      });
+    }
+
+    recalculateMockCart();
+    return HttpResponse.json(mockCart);
+  }),
+
+  http.put(P(`${ENDPOINTS.cart.addItem()}/:productId`), async ({ params, request }) => {
+    const productId = Number(params.productId);
+    const body = (await request.json().catch(() => ({}))) as { quantity?: number };
+    const quantity = body.quantity ?? 1;
+    const product = products.find((p) => p.id === productId);
+
     if (product && quantity > product.stock) {
       return HttpResponse.json(
         {
@@ -101,13 +291,37 @@ const cartHandlers = [
         { status: 409 },
       );
     }
-    return HttpResponse.json(cart);
+
+    const itemIndex = mockCart.items.findIndex((i) => i.productId === productId);
+    if (itemIndex >= 0) {
+      if (quantity <= 0) {
+        mockCart.items.splice(itemIndex, 1);
+      } else {
+        const item = mockCart.items[itemIndex]!;
+        item.quantity = quantity;
+        item.lineTotal = toMoney((parseFloat(item.unitPrice) * quantity).toFixed(2));
+      }
+    }
+    recalculateMockCart();
+    return HttpResponse.json(mockCart);
   }),
 
-  http.put(P(`${ENDPOINTS.cart.addItem()}/:productId`), () => HttpResponse.json(cart)),
-  http.delete(P(`${ENDPOINTS.cart.addItem()}/:productId`), () => HttpResponse.json(cart)),
-  http.delete(P(ENDPOINTS.cart.clear()), () => HttpResponse.json({ ...cart, items: [], itemCount: 0, totalAmount: "0.00" })),
-  http.post(P(ENDPOINTS.cart.merge()), () => HttpResponse.json(cart)),
+  http.delete(P(`${ENDPOINTS.cart.addItem()}/:productId`), ({ params }) => {
+    const productId = Number(params.productId);
+    mockCart.items = mockCart.items.filter((i) => i.productId !== productId);
+    recalculateMockCart();
+    return HttpResponse.json(mockCart);
+  }),
+
+  http.delete(P(ENDPOINTS.cart.clear()), () => {
+    mockCart.items = [];
+    mockCart.totalQuantity = 0;
+    mockCart.totalPrice = toMoney("0.00");
+    persistMockCart();
+    return HttpResponse.json(mockCart);
+  }),
+
+  http.post(P(ENDPOINTS.cart.merge()), () => HttpResponse.json(mockCart)),
 ];
 
 /* --------------------------------- orders --------------------------------- */

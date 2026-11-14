@@ -10,7 +10,7 @@ import crypto from "crypto";
  *   MD5(merchant_id + order_id + amount + currency + MD5(merchant_secret).toUpperCase()).toUpperCase()
  */
 export async function POST(req: NextRequest) {
-  const secret = process.env.PAYHERE_MERCHANT_SECRET;
+  const secret = process.env.PAYHERE_MERCHANT_SECRET?.trim();
   if (!secret || secret === "your_sandbox_merchant_secret_here") {
     return NextResponse.json(
       { error: "PAYHERE_MERCHANT_SECRET not configured" },

@@ -52,6 +52,10 @@ export const env = {
       process.env.NODE_ENV === "development" ? "true" : "false",
     ) === "true",
 
+  /** Cloudinary — unsigned preset for direct browser uploads (admin image upload). */
+  cloudinaryCloudName: readEnv(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, ""),
+  cloudinaryUploadPreset: readEnv(process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET, ""),
+
   /** PayHere merchant ID (public — used in the browser payment form). */
   payhereMerchantId: readEnv(process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID, ""),
   /** true = use PayHere sandbox; false = live. */

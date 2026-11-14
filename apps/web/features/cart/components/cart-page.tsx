@@ -9,19 +9,22 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { formatMoney, request, ENDPOINTS, type CartItemResponse } from "@/core/api";
 import { PRODUCT_IMAGE_FALLBACK } from "@/core/config/constants";
 import { useCart, useRemoveFromCart, useUpdateCartItem, useClearCart } from "../services/useCart";
-import { CheckoutDialog, type CheckoutItem } from "@/features/checkout/components/checkout-dialog";
+import { useProduct } from "@/features/catalog/services/useProduct";
+import { CheckoutDialog, type CheckoutItem } from "@/components/checkout-dialog";
 
 /* ------------------------------ Cart item row ----------------------------- */
 
 function CartItem({ item }: { item: CartItemResponse }) {
   const remove = useRemoveFromCart();
   const update = useUpdateCartItem();
+  const { data: product } = useProduct(item.productId);
+  const imageUrl = item.imageUrl ?? product?.imageUrl ?? PRODUCT_IMAGE_FALLBACK;
 
   return (
     <div className="flex items-start gap-4 py-4">
       <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary">
         <Image
-          src={item.imageUrl ?? PRODUCT_IMAGE_FALLBACK}
+          src={imageUrl}
           alt={item.productName}
           fill
           sizes="80px"
@@ -33,7 +36,7 @@ function CartItem({ item }: { item: CartItemResponse }) {
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-2 text-sm font-medium text-foreground">{item.productName}</h3>
           <p className="shrink-0 font-tabular text-sm font-semibold text-foreground">
-            {formatMoney(item.subtotal)}
+            {formatMoney(item.lineTotal)}
           </p>
         </div>
         <p className="text-xs text-muted-foreground">{formatMoney(item.unitPrice)} each</p>
@@ -169,7 +172,7 @@ export function CartPage() {
     productName: i.productName,
     quantity: i.quantity,
     unitPrice: i.unitPrice,
-    subtotal: i.subtotal,
+    subtotal: i.lineTotal,
   }));
 
   return (
@@ -179,7 +182,7 @@ export function CartPage() {
         <h1 className="font-display text-3xl font-bold text-foreground">
           Your cart
           <span className="ml-2 text-lg font-normal text-muted-foreground">
-            ({cart.itemCount} {cart.itemCount === 1 ? "item" : "items"})
+            ({cart.totalQuantity} {cart.totalQuantity === 1 ? "item" : "items"})
           </span>
         </h1>
         <Button
@@ -204,8 +207,8 @@ export function CartPage() {
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
         <p className="font-semibold text-foreground">Order summary</p>
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Subtotal ({cart.itemCount} items)</span>
-          <span className="font-tabular font-semibold">{formatMoney(cart.totalAmount)}</span>
+          <span className="text-muted-foreground">Subtotal ({cart.totalQuantity} items)</span>
+          <span className="font-tabular font-semibold">{formatMoney(cart.totalPrice)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Shipping</span>
@@ -213,7 +216,7 @@ export function CartPage() {
         </div>
         <div className="border-t border-border pt-3 flex justify-between font-semibold">
           <span>Total</span>
-          <span className="font-tabular text-lg">{formatMoney(cart.totalAmount)}</span>
+          <span className="font-tabular text-lg">{formatMoney(cart.totalPrice)}</span>
         </div>
 
         <Button size="lg" className="w-full" onClick={handleCheckout}>
@@ -228,7 +231,7 @@ export function CartPage() {
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         items={checkoutItems}
-        total={cart.totalAmount}
+        total={cart.totalPrice}
         orderId={orderId}
       />
     </div>

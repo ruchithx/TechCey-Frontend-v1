@@ -9,11 +9,11 @@
  * en-US. If the real target market differs (e.g. LKR / en-LK), change these two
  * constants — everything downstream (formatMoney) reads from here.
  */
-export const DEFAULT_CURRENCY = "USD" as const;
-export const DEFAULT_LOCALE = "en-US" as const;
+export const DEFAULT_CURRENCY = "LKR" as const;
+export const DEFAULT_LOCALE = "en-LK" as const;
 
 /** Default shipping country (mirrors the orders table default). */
-export const DEFAULT_COUNTRY = "US" as const;
+export const DEFAULT_COUNTRY = "LK" as const;
 
 /** Product list pagination defaults (mirror product-service query params). */
 export const DEFAULT_PAGE_SIZE = 20;

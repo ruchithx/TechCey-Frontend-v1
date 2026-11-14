@@ -8,7 +8,11 @@
 
 import { env } from "@/core/config/env";
 
-let started = false;
+// Store the in-flight promise so React Strict Mode's double-invocation of
+// useEffect awaits the same worker startup rather than returning immediately
+// (which would set mocksReady=true before the worker is actually controlling
+// the page, causing queries to hit the real backend).
+let workerPromise: Promise<void> | null = null;
 
 export async function startMocks(): Promise<void> {
   if (!env.enableMsw) return;
@@ -18,11 +22,15 @@ export async function startMocks(): Promise<void> {
       "[msw] Refusing to start: mocks are enabled (NEXT_PUBLIC_ENABLE_MSW=true) in a production build.",
     );
   }
-  if (started || typeof window === "undefined") return;
-  started = true;
+  if (typeof window === "undefined") return;
 
-  const { worker } = await import("@/mocks/browser");
-  await worker.start({
-    onUnhandledRequest: "bypass", // let non-API requests (fonts, images) through
-  });
+  if (!workerPromise) {
+    workerPromise = import("@/mocks/browser").then(({ worker }) =>
+      worker.start({
+        onUnhandledRequest: "bypass", // let non-API requests (fonts, images) through
+      }),
+    );
+  }
+
+  return workerPromise;
 }

@@ -5,8 +5,8 @@
  * Kept in lockstep with apps/web/core/config/constants.ts — the storefront and
  * the console must format money and dates identically.
  */
-export const DEFAULT_CURRENCY = "USD" as const;
-export const DEFAULT_LOCALE = "en-US" as const;
+export const DEFAULT_CURRENCY = "LKR" as const;
+export const DEFAULT_LOCALE = "en-LK" as const;
 
 /** Default list pagination size (mirrors most services' `size` default). */
 export const DEFAULT_PAGE_SIZE = 20;
