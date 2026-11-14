@@ -25,12 +25,10 @@ export async function startMocks(): Promise<void> {
   if (typeof window === "undefined") return;
 
   if (!workerPromise) {
-    workerPromise = import("@/mocks/browser").then(({ worker }) =>
-      worker.start({
-        onUnhandledRequest: "bypass", // let non-API requests (fonts, images) through
-      }),
-    );
+    workerPromise = import("@/mocks/browser").then(async ({ worker }) => {
+      await worker.start({ onUnhandledRequest: "bypass" });
+    });
   }
 
-  return workerPromise;
+  return workerPromise ?? Promise.resolve();
 }
