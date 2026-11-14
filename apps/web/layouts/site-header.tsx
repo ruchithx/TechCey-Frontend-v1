@@ -16,6 +16,27 @@ import Link from "next/link";
 import { Menu, ShoppingCart, X } from "lucide-react";
 import { Button } from "@repo/ui/components/button";
 import { useAuth } from "@/core/auth";
+import { useCart } from "@/core/cart";
+
+function CartBadge({ inline }: { inline?: boolean }) {
+  const { data: cart } = useCart();
+  const count = cart?.totalQuantity ?? 0;
+  if (count <= 0) return null;
+
+  if (inline) {
+    return (
+      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+        {count}
+      </span>
+    );
+  }
+
+  return (
+    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 /** Outlet a feature fills later (e.g. cart badge count, search input). */
 function Slot({ id, children }: { id: string; children?: ReactNode }) {
@@ -78,7 +99,7 @@ export function SiteHeader() {
           </Link>
           <Link href="/cart" className="relative inline-flex items-center text-muted-foreground hover:text-foreground" aria-label="Cart">
             <ShoppingCart className="size-5" />
-            <Slot id="cart-badge" />
+            <CartBadge />
           </Link>
           <AccountMenu />
         </nav>
@@ -118,8 +139,9 @@ export function SiteHeader() {
             <Link href="/products" className="text-foreground" onClick={() => setDrawerOpen(false)}>
               Products
             </Link>
-            <Link href="/cart" className="text-foreground" onClick={() => setDrawerOpen(false)}>
-              Cart
+            <Link href="/cart" className="flex items-center justify-between text-foreground" onClick={() => setDrawerOpen(false)}>
+              <span>Cart</span>
+              <CartBadge inline />
             </Link>
             <AccountMenu onNavigate={() => setDrawerOpen(false)} />
           </div>

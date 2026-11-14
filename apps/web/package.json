@@ -14,6 +14,7 @@
     "api:types": "echo 'TODO(openapi): openapi-typescript <gateway>/api-docs -o core/api/generated.ts once services are reachable'"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "lucide-react": "^1.32.0",
@@ -21,7 +22,9 @@
     "oidc-client-ts": "^3.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-oidc-context": "^3.3.1"
+    "react-hook-form": "^7.54.2",
+    "react-oidc-context": "^3.3.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

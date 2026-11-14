@@ -7,16 +7,22 @@
 /* Generate utilities for classes used inside the shared @repo/ui package. */
 @source "../../../packages/ui/src/**/*.{ts,tsx}";
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+/* Layered (not left bare) so Tailwind utility classes — e.g. a Button's
+   text-secondary-foreground rendered onto an <a> via asChild — still win via
+   cascade-layer order. A bare (unlayered) rule here would beat every layered
+   utility regardless of specificity, silently overriding button/link colors. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-html,
-body {
-  max-width: 100vw;
-}
+  html,
+  body {
+    max-width: 100vw;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }

@@ -22,6 +22,8 @@ export interface ProductResponse {
   imageUrl: string | null; // nullable — always needs a fallback
   stock: number;
   categoryId: number;
+  /** Nested object returned by the real product-service (absent in MSW mocks). */
+  category?: { id: number; name: string; description: string | null };
   createdAt: string; // ISO-8601
   updatedAt: string;
 }
@@ -30,6 +32,20 @@ export interface CategoryResponse {
   id: number;
   name: string;
   description: string | null;
+}
+
+export interface ProductRequest {
+  name: string;
+  description?: string | null;
+  price: string; // decimal string — backend BigDecimal serialised as string
+  imageUrl?: string | null;
+  stock: number;
+  categoryId: number;
+}
+
+export interface CategoryRequest {
+  name: string;
+  description?: string | null;
 }
 
 /** product list query params (mirror product-service). */
@@ -48,17 +64,17 @@ export interface ProductListParams {
 export interface CartItemResponse {
   productId: number;
   productName: string;
-  imageUrl: string | null;
+  imageUrl?: string | null; // not returned by cart-service; present in MSW mocks only
   unitPrice: Money;
   quantity: number;
-  subtotal: Money;
+  lineTotal: Money; // backend field name (was: subtotal)
 }
 
 export interface CartResponse {
   userId: string;
   items: CartItemResponse[];
-  totalAmount: Money;
-  itemCount: number;
+  totalPrice: Money;     // backend field name (was: totalAmount)
+  totalQuantity: number; // backend field name (was: itemCount)
 }
 
 /* ------------------------------- order-service -------------------------------- */
